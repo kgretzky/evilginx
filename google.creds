@@ -1,0 +1,4 @@
+[creds]
+email_arg=Email
+passwd_arg=Passwd
+tokens=[{"domain":".google.com","cookies":["SID", "HSID", "SSID", "APISID", "SAPISID", "NID"]},{"domain":"accounts.google.com","cookies":["GAPS", "LSID"]}]
