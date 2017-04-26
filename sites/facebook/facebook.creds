@@ -1,0 +1,4 @@
+[creds]
+email_arg=email
+passwd_arg=pass
+tokens=[{"domain":".facebook.com","cookies":["c_user","lu","xs","sb"]}]

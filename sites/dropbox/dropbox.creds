@@ -1,0 +1,4 @@
+[creds]
+email_arg=login_email
+passwd_arg=login_password
+tokens=[{"domain":".dropbox.com","cookies":["bjar", "blid", "t"]},{"domain":".www.dropbox.com","cookies":["jar", "lid"]}]

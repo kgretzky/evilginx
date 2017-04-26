@@ -1,0 +1,13 @@
+version 1.0 :
+[+] Created central script for handling setup, parsing and generating urls.
+[+] Added install.sh script that will single-handedly install Evilginx package on Debian.
+[+] Added support for adding external site templates in framework-like manner.
+[+] Added sites support for following websites: Facebook, Dropbox, Linkedin and new Google sign-in page.
+[+] Reorganized code and directory structure to be more accessible for future development.
+[+] Redirection URLs can now be embedded into phishing URLs using base64 encoding.
+[+] Setup script allows to enable automatic logs parsing every minute.
+[+] Setup script automatically handles SSL/TLS certificate retrieval from LetsEncrypt and its renewal.
+[+] Added regular expressions for parsing POST arguments via .creds config files.
+[+] Fixed: Opening Evilginx site via HTTP will now properly redirect to HTTPS.
+[+] Fixed: 'Origin' and 'Referal' HTTP headers are now properly modified.
+[+] Fixed: Minor bugs and stability issues.

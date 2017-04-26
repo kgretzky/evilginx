@@ -1,0 +1,4 @@
+[creds]
+email_arg=session_key
+passwd_arg=session_password
+tokens=[{"domain":".www.linkedin.com","cookies":["li_at"]}]
