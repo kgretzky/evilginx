@@ -7,6 +7,7 @@ Evilginx is a man-in-the-middle attack framework used for phishing credentials a
 You can learn how it works and how to install everything yourself on my blog:
 
 First post slightly outdated now: [Evilginx - Advanced Phishing With Two-factor Authentication Bypass](https://breakdev.org/evilginx-advanced-phishing-with-two-factor-authentication-bypass/)
+
 Evilginx 1.0 Update: [Evilginx 1.0 Update - Up Your Game in 2FA Phishing](https://breakdev.org/evilginx-1-0-update-up-your-game-in-2fa-phishing)
 
 #### Installation
