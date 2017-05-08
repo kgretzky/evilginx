@@ -1,4 +1,8 @@
-version 1.0 :
+version 1.0.1 (2017-05-08):
+[+] Fixed '[warn] duplicate MIME type "text/html"' warnings in /var/log/nginx/error.log.
+[+] Added Kali Linux compatibility to install.sh script.
+
+version 1.0 (2017-04-26) :
 [+] Created central script for handling setup, parsing and generating urls.
 [+] Added install.sh script that will single-handedly install Evilginx package on Debian.
 [+] Added support for adding external site templates in framework-like manner.

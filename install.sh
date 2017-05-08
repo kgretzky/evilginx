@@ -24,8 +24,9 @@ if [ -z "$os_type" ]; then
   [ -f /etc/lsb-release ] && os_type="$(. /etc/lsb-release && echo "$DISTRIB_ID")"
   [ "$os_type" = "debian" ] && os_type=Debian
   [ "$os_type" = "ubuntu" ] && os_type=Ubuntu
+  [ "$os_type" = "kali" ] && os_type=Kali
 fi
-if [ "$os_type" != "Ubuntu" ] && [ "$os_type" != "Debian" ] && [ "$os_type" != "Raspbian" ]; then
+if [ "$os_type" != "Ubuntu" ] && [ "$os_type" != "Debian" ] && [ "$os_type" != "Raspbian" ] && [ "$os_type" != "Kali" ]; then
   exiterr "This script only supports Ubuntu/Debian."
 fi
 
