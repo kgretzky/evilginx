@@ -10,6 +10,10 @@ First post slightly outdated now: [Evilginx - Advanced Phishing With Two-factor 
 
 Evilginx 1.0 Update: [Evilginx 1.0 Update - Up Your Game in 2FA Phishing](https://breakdev.org/evilginx-1-0-update-up-your-game-in-2fa-phishing)
 
+#### Contributors Hall of Fame
+
+[@poweroftrue](https://github.com/poweroftrue)
+
 #### Installation
 
 Evilginx provides an installation script `install.sh` that takes care of installing the whole package on any Debian wheezy/jessie machine, in fire and forget manner.

@@ -1,3 +1,14 @@
+version 1.0.2 (beta):
+[+] Added 'server_names_hash_bucket_size: 128' to support long hostnames.
+[+] Fixed rare issue, which could be triggered when only visitor's email was identified at the time
+    of truncating logs, after parsing, breaking the chain of logged requests, which would miss an
+    email address on next parse.
+[+] Fixed several typos in site config files. (@poweroftrue)
+[+] Fixed issue with Nginx proxy bailing out on receiving too big upstream responses.
+[+] Fixed issue with Facebook overwriting redirection cookie with 'deleted' (@poweroftrue)
+[+] Added 'update.sh' file which should be executed after every 'git pull' to update nginx config files.
+[+] Added Dockerfile
+
 version 1.0.1 (2017-05-08):
 [+] Fixed '[warn] duplicate MIME type "text/html"' warnings in /var/log/nginx/error.log.
 [+] Added Kali Linux compatibility to install.sh script.

