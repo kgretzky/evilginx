@@ -1,4 +1,4 @@
-## Evilginx v.1.0.1
+## Evilginx v.1.1.0
 
 ![Evilginx](/img/evilginx-title.png?raw=true "Evilginx")
 
