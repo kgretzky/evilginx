@@ -10,6 +10,11 @@ First post slightly outdated now: [Evilginx - Advanced Phishing With Two-factor 
 
 Evilginx 1.0 Update: [Evilginx 1.0 Update - Up Your Game in 2FA Phishing](https://breakdev.org/evilginx-1-0-update-up-your-game-in-2fa-phishing)
 
+#### Disclaimer
+
+I am aware that Evilginx can be used for very nefarious purposes. This work is merely a demonstration of what adept attackers can do. It is the defender's responsibility to take such attacks into consideration, when setting up defenses, and find ways to protect against this phishing method.
+Evilginx should be used only in legitimate penetration testing assignments with written permission from to-be-phished parties.
+
 #### Contributors Hall of Fame
 
 [@poweroftrue](https://github.com/poweroftrue)
