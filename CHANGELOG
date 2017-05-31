@@ -1,4 +1,4 @@
-version 1.1.0 (beta):
+version 1.1.0 (2017-06-01):
 [+] Added iCloud.com support.
 [+] Added Live.com support.
 [+] Specifying domain name with 'setup --enable' is now optional if site was enabled before.
