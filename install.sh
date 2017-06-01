@@ -115,10 +115,13 @@ PrivateTmp=true
 WantedBy=multi-user.target  
 EOF
 
-grep -q -F 'include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf || sed -i '/^http {/a\ \ \ \ include \/etc\/nginx\/sites-enabled\/*;\n' /etc/nginx/nginx.conf
+grep -q -F 'include /etc/nginx/sites-enabled/*;' /etc/nginx/nginx.conf || sed -i '/^http {/a\ \ \ \ include \/etc\/nginx\/sites-enabled\/*;' /etc/nginx/nginx.conf
 mkdir -p /etc/nginx/sites-available/ /etc/nginx/sites-enabled/
 
 systemctl enable nginx.service || exiterr "Failed to enable Nginx daemon."
 systemctl start nginx.service || exiterr "Failed to start Nginx daemon."
+
+chmod 700 update.sh
+./update.sh
 
 bigecho "Evilginx successfully installed!"

