@@ -35,7 +35,7 @@ if [ "$(id -u)" != 0 ]; then
 fi
 
 # check if systemd is installed
-if [ -z $(which systemctl) ]; then
+if [ -z "$(which systemctl)" ]; then
   exiterr "Systemd must be installed. Install with 'apt-get install systemd-sysv' and reboot."
 fi
 
@@ -55,7 +55,7 @@ apt-get -yq update || exiterr "'apt-get update' failed."
 
 # make sure to use the 1.0.x package of openssl
 LIBSSL_PKG='libssl-dev'
-if [ ! -z $(apt-cache search libssl1.0-dev | sed 's/\s.*//') ]; then
+if [ ! -z "$(apt-cache search libssl1.0-dev | sed 's/\s.*//')" ]; then
   LIBSSL_PKG='libssl1.0-dev'
 fi
 
@@ -87,7 +87,7 @@ if ! /usr/sbin/nginx -v 2>/dev/null; then
 fi
 
 iecho "Downloading Certbot..."
-cd $CUR_DIR
+cd "$CUR_DIR" || exit
 wget https://dl.eff.org/certbot-auto || exiterr "Certbot download failed."
 chmod 700 certbot-auto
 
