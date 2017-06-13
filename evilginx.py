@@ -28,7 +28,7 @@ import sys
 import subprocess
 import base64
 
-VERSION = 'v.1.1.0'
+VERSION = 'v.1.1.1'
 
 EOL = '\n'
 TAB = '\t'
@@ -673,8 +673,8 @@ def genurl_main(args):
                 if phish_path[0] != '/': phish_path = '/' + phish_path
                 gen_url = url + phish_path
                 if args.redirect != '':
-                    b64redir = base64.urlsafe_b64encode(args.redirect).replace('=','')
-                    gen_url += '?' + cfg.get('site','redir_arg') + '=0' + b64redir
+                    b64redir = base64.b64encode(args.redirect)
+                    gen_url += '?' + cfg.get('site','redir_arg') + '=0' + urllib.quote(b64redir)
                 print ' : ' + gen_url
 
         else:
