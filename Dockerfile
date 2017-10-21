@@ -1,13 +1,13 @@
 FROM debian:jessie
 
-RUN apt-get update && apt-get install -y git python zlib1g-dev net-tools make gcc libpcre3-dev libssl1.0-dev wget
+RUN apt-get update && apt-get install -y git python zlib1g-dev net-tools make gcc libpcre3-dev libssl-dev wget
 
 
-ENV OPENRESTY_VERSION='1.11.2.2' \
-OPENRESTY_SRC_URL="https://openresty.org/download/openresty-$OPENRESTY_VERSION.tar.gz" \
-openresty_src="openresty-$OPENRESTY_VERSION"
+ENV OPENRESTY_VERSION='1.11.2.2' 
+ENV OPENRESTY_SRC_URL="https://openresty.org/download/openresty-$OPENRESTY_VERSION.tar.gz"
+ENV openresty_src="openresty-$OPENRESTY_VERSION"
 
-RUN export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" && \
+RUN export PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin" && \\
 mkdir -p /opt/src && cd /opt/src
 
 
