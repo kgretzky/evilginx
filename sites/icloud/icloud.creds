@@ -1,0 +1,4 @@
+[creds]
+email_json_arg=accountName
+passwd_json_arg=password
+tokens=[{"domain":".icloud.com","cookies":["X-APPLE-WEBAUTH-LOGIN","X-APPLE-WEBAUTH-VALIDATE","X-APPLE-WEBAUTH-TOKEN","X-APPLE-WEBAUTH-USER"]}]

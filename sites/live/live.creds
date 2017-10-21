@@ -1,0 +1,4 @@
+[creds]
+email_arg=login
+passwd_arg=passwd
+tokens=[{"domain":".live.com","cookies":["WLSSC"]}]

