@@ -2,6 +2,10 @@
 
 ![Evilginx](/img/evilginx-title.png?raw=true "Evilginx")
 
+**THIS VERSION IS OBSOLETE, PLEASE USE THE LATEST VERSION**
+
+**EVILGINX 2: https://github.com/kgretzky/evilginx2**
+
 Evilginx is a man-in-the-middle attack framework used for phishing credentials and session cookies of any web service. It's core runs on Nginx HTTP server, which utilizes `proxy_pass` and `sub_filter` to proxy and modify HTTP content, while intercepting traffic between client and server.
 
 You can learn how it works and how to install everything yourself on my blog:
