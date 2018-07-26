@@ -2,7 +2,7 @@
 
 ![Evilginx](/img/evilginx-title.png?raw=true "Evilginx")
 
-**THIS VERSION IS OBSOLETE, PLEASE USE THE LATEST VERSION**
+**THIS VERSION IS OBSOLETE. PLEASE USE THE LATEST VERSION!**
 
 **EVILGINX 2: https://github.com/kgretzky/evilginx2**
 
