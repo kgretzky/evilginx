@@ -1,3 +1,6 @@
+version 1.1.1 (beta):
+[+] Fixed base64 encoding issue of redirection URLs that broke redirection if URL contained special characters, such as '?'.
+
 version 1.1.0 (2017-06-01):
 [+] Added iCloud.com support.
 [+] Added Live.com support.
